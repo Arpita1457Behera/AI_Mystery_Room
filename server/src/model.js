@@ -1,0 +1,3 @@
+import mongoose from 'mongoose';
+const CaseSchema=new mongoose.Schema({id:{type:String,unique:true,index:true},title:String,premise:String,story:String,difficulty:String,generationMode:String,canonicalCase:mongoose.Schema.Types.Mixed,suspects:[mongoose.Schema.Types.Mixed],clues:[mongoose.Schema.Types.Mixed],evidence:[mongoose.Schema.Types.Mixed],progress:mongoose.Schema.Types.Mixed,accusation:mongoose.Schema.Types.Mixed,result:mongoose.Schema.Types.Mixed,createdAt:Date,completedAt:Date},{timestamps:true,versionKey:false});
+export const CaseModel=mongoose.models.Case||mongoose.model('Case',CaseSchema);

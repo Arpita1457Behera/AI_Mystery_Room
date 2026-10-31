@@ -1,0 +1,1 @@
+export default { content: ['./index.html', './src/**/*.{js,jsx}'], theme: { extend: { colors: { ink: '#101313', paper: '#e8e4d9', acid: '#d2f36b', muted: '#92958d', panel: '#191e1d' }, fontFamily: { display: ['Georgia', 'serif'], mono: ['ui-monospace', 'monospace'] } } }, plugins: [] };
