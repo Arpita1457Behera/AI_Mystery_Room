@@ -4,15 +4,12 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import { rateLimit } from 'express-rate-limit';
 import { randomUUID } from 'node:crypto';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { AccuseSchema, buildFallback, CreateSchema, GeneratedSchema, rules, serializeCase } from './domain.js';
 import { CaseModel } from './model.js';
 import { generateCase } from './gemini.js';
 
 const app=express();app.disable('x-powered-by');app.use(express.json({limit:'20kb'}));
-const currentDir=path.dirname(fileURLToPath(import.meta.url));
-const clientDist=path.resolve(currentDir,'../../client/dist');
+
 const origins = [
   'http://localhost:5173',
   'https://ai-mystery-room-jmu9md0r7-arpita1457behera.vercel.app',
@@ -45,8 +42,7 @@ app.post('/api/cases/:id/clues/:clueId/discover',actionLimit,async(req,res)=>{co
 app.post('/api/cases/:id/hints',actionLimit,async(req,res)=>{const c=await findCase(req.params.id);if(!c)return fail(res,404,'CASE_NOT_FOUND','This case could not be found.');if(c.progress.status!=='active')return fail(res,409,'INVALID_STATE','This case is already complete.');if(c.progress.hintsRemaining<=0)return fail(res,409,'HINT_LIMIT_REACHED','No hints remain for this case.');const index=c.progress.deliveredHints.length,hint={id:`hint_${index+1}`,text:c.canonicalCase.hintPlan[index]};c.progress.deliveredHints.push(hint.id);c.progress.hintsRemaining-=1;await saveCase(c);res.json({case:serializeCase(c).case,hint});});
 app.post('/api/cases/:id/accuse',actionLimit,async(req,res)=>{const parsed=AccuseSchema.safeParse(req.body);if(!parsed.success)return fail(res,400,'INVALID_REQUEST','Choose a valid suspect.');const c=await findCase(req.params.id);if(!c)return fail(res,404,'CASE_NOT_FOUND','This case could not be found.');if(c.progress.status!=='active')return fail(res,409,'CASE_COMPLETED','An accusation has already been recorded.');if(!c.suspects.some(s=>s.id===parsed.data.suspectId))return fail(res,404,'SUSPECT_NOT_FOUND','That suspect is not part of this case.');const correct=parsed.data.suspectId===c.canonicalCase.culpritSuspectId,baseScore=correct?rules[c.difficulty].base:0,cluePoints=c.progress.discoveredClueIds.length*5,hintPenalty=c.progress.deliveredHints.length*10;c.accusation={suspectId:parsed.data.suspectId,correct,submittedAt:new Date()};c.result={correct,accused:c.suspects.find(s=>s.id===parsed.data.suspectId),culprit:c.suspects.find(s=>s.id===c.canonicalCase.culpritSuspectId),solution:c.canonicalCase.solution,score:{baseScore,cluePoints,hintPenalty,finalScore:Math.max(0,baseScore+cluePoints-hintPenalty)}};c.progress.status='completed';c.completedAt=new Date();if(!await finalizeCase(c))return fail(res,409,'CASE_COMPLETED','An accusation has already been recorded.');res.json({accepted:true});});
 app.get('/api/cases/:id/result',actionLimit,async(req,res)=>{const c=await findCase(req.params.id);if(!c)return fail(res,404,'CASE_NOT_FOUND','This case could not be found.');if(c.progress.status!=='completed'||!c.result)return fail(res,409,'RESULTS_SEALED','Complete your accusation before viewing the results.');res.json({result:{...c.result,score:c.result.score}});});
-app.use(express.static(clientDist,{index:false}));
-app.get(/^(?!\/api\/).*/, (req,res,next)=>res.sendFile(path.join(clientDist,'index.html'),err=>err&&next(err)));
+
 app.use((err,req,res,next)=>{console.error(JSON.stringify({event:'request_error',message:err.message}));fail(res,500,'INTERNAL_ERROR','Something went wrong. Please try again.');});
 const port=Number(process.env.PORT)||5000;
 if(process.env.MONGODB_URI){mongoose.connect(process.env.MONGODB_URI).then(()=>console.log('MongoDB connected')).catch(e=>console.error(JSON.stringify({event:'mongodb_connection_failed',message:e.message})));}
