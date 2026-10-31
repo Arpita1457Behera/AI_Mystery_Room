@@ -12,6 +12,7 @@ const app=express();app.disable('x-powered-by');app.use(express.json({limit:'20k
 
 const origins = [
   'http://localhost:5173',
+  'https://ai-mystery-room-web.vercel.app',
   'https://ai-mystery-room-jmu9md0r7-arpita1457behera.vercel.app',
   'https://ai-mystery-room-j9md0r7-arpita1457behera.vercel.app',
   ...(process.env.CLIENT_URL || '')
