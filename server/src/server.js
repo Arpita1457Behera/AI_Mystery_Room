@@ -13,8 +13,22 @@ import { generateCase } from './gemini.js';
 const app=express();app.disable('x-powered-by');app.use(express.json({limit:'20kb'}));
 const currentDir=path.dirname(fileURLToPath(import.meta.url));
 const clientDist=path.resolve(currentDir,'../../client/dist');
-const origins=(process.env.CLIENT_URL||'http://localhost:5173').split(',').map(x=>x.trim());
-app.use(cors({origin:(origin,cb)=>!origin||origins.includes(origin)?cb(null,true):cb(new Error('Origin not allowed')),methods:['GET','POST'],allowedHeaders:['Content-Type']}));
+const origins = [
+  'http://localhost:5173',
+  'https://ai-mystery-room-j9md0r7-arpita1457behera.vercel.app',
+  ...(process.env.CLIENT_URL || '')
+    .split(',')
+    .map(url => url.trim())
+    .filter(Boolean)
+];
+app.use(cors({
+  origin: (origin, cb) =>
+    !origin || origins.includes(origin)
+      ? cb(null, true)
+      : cb(new Error('Origin not allowed')),
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
 const generationLimit=rateLimit({windowMs:60*60*1000,limit:10,standardHeaders:true,legacyHeaders:false});
 const actionLimit=rateLimit({windowMs:60*1000,limit:40,standardHeaders:true,legacyHeaders:false});
 const memory=new Map();const mongoReady=()=>mongoose.connection.readyState===1;
